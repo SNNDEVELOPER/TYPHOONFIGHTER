@@ -348,7 +348,7 @@ enemy.prototype.updateEnemies = function() {
 // INITIALIZE ENEMIES
 enemy.prototype.initializeEnemy = function() {
 	for (var i = 0; i < this.total; i++) {
-		enemies.push([this.xPos, (Math.random() * 100) + this.yPos, this.width, this.height, this.speed]);
+		enemies.push([this.xPos, this.yPos, this.width, this.height, this.speed]);
 		this.xPos += this.width + 65; // SPACE JETS EVENLY ACROSS X FOR FIRST WAVE
 	}
 }
@@ -387,7 +387,6 @@ function rocket() {
 }
 
 rocket.prototype.drawRocket = function() {
-	console.log("Draw rocket")
 	if(rockets.length) {
 		for (var i = 0; i < rockets.length; i++) {
  		 	ctx.drawImage(this.img, rockets[i][0], rockets[i][1], rockets[i][2], rockets[i][3])
@@ -765,7 +764,9 @@ function gameLoop() {
 	if(jet.inPlay && startGameToggle && life.life > 0) {
 		strikeDetection();
  		jet.jetCollision();
-
+ 			console.log(points.font);
+ 			console.log(life.font)
+ 			console.log(level.font);
 		// BONUS TOGGLE TRUE
 		if(bonusToggle) {
 			bonusStrike();
@@ -788,31 +789,11 @@ function gameLoop() {
 
 	}
 
-	// SHOW CONTINUE SCREEN AND POINTS
-	if(life.life == 0) {
- 		points.drawScore();
-		life.drawLife();
-		level.drawLevel(); 
-	}
-
  
 	
 	// VARIABLE REQUIRED FOR PAUSE
-	loopGame = setTimeout(gameLoop, 1000 / 60); //30 FPS
+	loopGame = setTimeout(gameLoop, 1000 / 30); //30 FPS
 
-}
-
-//-------------------------------------------------------------------------------------------//
-// REQUEST ANIMATION FRAME WITH FALLBACK ------------------------------------------------------//
-//-------------------------------------------------------------------------------------------//
-
-function requestAnimateFrame(a) {
-	return requestAnimationFrame(a) ||
- 			webkitRequestAnimationFrame(a) ||
-			   mozRequestAnimationFrame(a) ||
-			   function(callback) {
- 					setTimeout(a, 1000 / 60);
-			   }
 }
 
 //-------------------------------------------------------------------------------------------//
