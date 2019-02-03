@@ -18,6 +18,7 @@ var canvas = document.getElementById("canvas"),
 	creditToggle = false,
 	startGameToggle = false,
 	bonusToggle = false,
+	backgroundToggle = false,
 	bonusHit = false,
 	levels = [],
 	bp = [];
@@ -92,12 +93,14 @@ function pauseGame() {
 		if (!pauseToggle) {
 			pauseToggle = true;
 			// CLEAR TIMEOUT OF LOOP
-			clearTimeout(loopGame);
+			pauseSound("gameMainSound");
+			cancelAnimationFrame(loopGame);
 			pause.drawPause();
 		} else if (pauseToggle) {
 		   pauseToggle = false;
+		   playMusic("gameMainSound");
 		   // SET TIMEOUT VARIABLE AGAIN
-		   loopGame = setTimeout(gameLoop, 1000 / 30);
+		   loopGame = requestAnimateFrame(gameLoop);
 		}
 	}
 }
@@ -145,6 +148,18 @@ function playSound(a) {
 function pauseSound(a) {
 	document.getElementById(a).currentTime = 0;
 	document.getElementById(a).pause();
+}
+
+function playMusic(a) {
+	document.getElementById(a).addEventListener('timeupdate', function() {
+		var buffer = .41; // 
+		if(this.currentTime > this.duration - buffer) {
+			this.currentTime = 0;
+			this.play();
+		}
+	}, false);
+	document.getElementById(a).pause();
+	document.getElementById(a).play();
 }
 
 //-------------------------------------------------------------------------------------------//
@@ -280,6 +295,12 @@ background.prototype.drawBackground = function() {
 	moveElement(t);
 }
 
+background.prototype.changeBackground = function(a) {
+	this.img = new Image();
+	this.img.src = a;
+
+}
+
 var background = new background();
 
 //-------------------------------------------------------------------------------------------//
@@ -288,18 +309,23 @@ var background = new background();
 
 function jet() {
 	this.img = new Image();
-	this.img.src = "assets/jet.png"; 
+	this.img.src = "assets/jet_spritesheet2.png"; 
 	this.xPos = (width / 2) - 25;
 	this.yPos = height - 75;
 	this.width = 50;
 	this.height = 57;
 	this.speed = 6;
 	this.inPlay = true;
-	
+	// JET ANIMATION FOR SPRITESHEET
+	this.moveX = 0;
+	this.frameWidth = 50;
+	this.frameHeight = 57;
+	this.currentFrame = 0;
+	this.totalFrames = 3;
 }
 
 jet.prototype.drawJet = function() {
-	ctx.drawImage(this.img, this.xPos, this.yPos);	
+	animateSprite(this);
 };
 
 jet.prototype.jetCollision = function() {
@@ -331,7 +357,7 @@ var jet = new jet();
 
 function enemy() {
 	this.img = new Image();
-	this.img.src = "assets/enemy.png";
+	this.img.src = "assets/enemy_spritesheet.png";
 	this.xPos = 50;
 	this.yPos = 45; // OFF CANVAS
 	this.width = 50;
@@ -339,6 +365,12 @@ function enemy() {
 	this.speed = 3;
 	this.total = 5;
  	this.pointValue = 10;
+ 	// JET ANIMATION FOR SPRITESHEET
+	this.moveX = 0;
+	this.frameWidth = 50;
+	this.frameHeight = 57;
+	this.currentFrame = 0;
+	this.totalFrames = 3;
 }
 
 enemy.prototype.updateEnemies = function() {
@@ -347,17 +379,32 @@ enemy.prototype.updateEnemies = function() {
 
 // INITIALIZE ENEMIES
 enemy.prototype.initializeEnemy = function() {
-	for (var i = 0; i < this.total; i++) {
-		enemies.push([this.xPos, this.yPos, this.width, this.height, this.speed]);
+	for(var i = 0; i < this.total; i++) {
+		enemies.push([this.xPos, (Math.random() * 100) + this.yPos, this.width, this.height, this.speed]);
 		this.xPos += this.width + 65; // SPACE JETS EVENLY ACROSS X FOR FIRST WAVE
 	}
 }
 
 // DRAW ENEMY
-enemy.prototype.drawEnemy = function() {
+enemy.prototype.drawEnemy1 = function() {
 	for (var i = 0; i < enemies.length; i++) {
  		ctx.drawImage(this.img, enemies[i][0], enemies[i][1]);
 	}
+}
+
+enemy.prototype.drawEnemy = function() {
+	for (var i = 0; i < enemies.length; i++) {
+		ctx.drawImage(this.img, this.moveX, 0, this.width, this.height, enemies[i][0], enemies[i][1], this.frameWidth, this.frameHeight);
+		
+		this.moveX += this.frameWidth + 0.5; // 1 induced jittery animation
+		if (this.currentFrame == this.totalFrames) {
+			this.moveX = 0;
+			this.currentFrame = 0;
+		  }
+	  	this.currentFrame++;
+  	
+	}
+	
 }
 
 // MOVE ENEMY
@@ -478,6 +525,7 @@ points.prototype.drawScore = function() {
 	if(score > 200 ) { 
 		enemy.speed = 6;
 		level.level = 2;
+		backgroundToggle = true;
 	}
 	
 	if(score > 400 ) {
@@ -623,7 +671,7 @@ function credits() {
 	this.line = "-----------------------";
 	this.email = "shaun@shaunnelson.com";
 	this.website = "www.shaunnelson.com";
-	this.version = "Version: 3.1";
+	this.version = "Version: 3.2";
 	this.instruction = "Press C to continue";
 }
 
@@ -652,12 +700,14 @@ function showCredits() {
 		if (!creditToggle) {
 			creditToggle = true;
 			// CLEAR TIMEOUT OF LOOP
-			clearTimeout(loopGame);
+			cancelAnimationFrame(loopGame);
+			pauseSound("gameMainSound");
 			credits.drawCredits();
 		} else if (creditToggle) {
 		   creditToggle = false;
+		   playMusic("gameMainSound");
 		   // SET TIMEOUT VARIABLE AGAIN
-		   loopGame = setTimeout(gameLoop, 1000 / 30);
+		   loopGame = requestAnimateFrame(gameLoop);
 		}
 	}
 }
@@ -720,6 +770,22 @@ function checkKeys() {
 }
 
 //-------------------------------------------------------------------------------------------//
+// ANIMATE SPRITE FUNCTION ------------------------------------------------------------------//
+//-------------------------------------------------------------------------------------------//
+
+function animateSprite(a) {
+ 	// img, sx, sy, sw, sh, dx, dy, dw, dh
+	ctx.drawImage(a.img, a.moveX, 0, a.width, a.height, a.xPos, a.yPos, a.frameWidth, a.frameHeight);
+	
+	a.moveX += a.frameWidth + 0.5; // 1 induced jittery animation
+	if (a.currentFrame == a.totalFrames) {
+		a.moveX = 0;
+		a.currentFrame = 0;
+	  }
+  	a.currentFrame++;
+}
+
+//-------------------------------------------------------------------------------------------//
 // EVENT LISTENERS --------------------------------------------------------------------------//
 //-------------------------------------------------------------------------------------------//
 
@@ -727,9 +793,9 @@ function checkKeys() {
 document.addEventListener("keydown", function(e) {
   keyPress[e.keyCode] = true;
   // PAUSE
-  if (e.keyCode == 80 && creditToggle !== true) { pauseGame(); }
+  if (e.keyCode == 80 && creditToggle !== true) { pauseGame(); playSound("buttonSound");}
   // CREDITS
-  if (e.keyCode == 67 && pauseToggle !== true) { showCredits();}
+  if (e.keyCode == 67 && pauseToggle !== true) { showCredits(); playSound("buttonSound");}
 });
 
 // REMOVE PREVIOUSLY PRESSED KEY
@@ -739,6 +805,7 @@ document.addEventListener("keyup", function(e) {
 
 // CLICK ANYWHERE IN CANVAS TO START GAME
 canvas.addEventListener("click", startGame, false);
+
 
 
 //-------------------------------------------------------------------------------------------//
@@ -752,49 +819,59 @@ enemy.initializeEnemy();
 
 function gameLoop() {
 	clearCanvas(ctx);
+	
+ 	if(backgroundToggle) {
+ 		background.changeBackground("assets/sealand.png");
+ 	}
 
  	background.drawBackground();
 	clouds.drawClouds();
-
+	
 	if(!startGameToggle) {
 		startScreen.drawStartScreen();
-	}
-	
-	// IF JET IN PLAY - TRUE AND GREATER THAN 0
-	if(jet.inPlay && startGameToggle && life.life > 0) {
-		strikeDetection();
- 		jet.jetCollision();
- 			console.log(points.font);
- 			console.log(life.font)
- 			console.log(level.font);
-		// BONUS TOGGLE TRUE
-		if(bonusToggle) {
-			bonusStrike();
-			bonusPoints.moveBonusPoints();
-			bonusPoints.drawBonusPoints();
+		playMusic("gameMainSound");
+	} else {
+		// IF JET IN PLAY - TRUE AND GREATER THAN 0
+		if(jet.inPlay  && startGameToggle && life.life > 0) {
+			strikeDetection();
+	 		jet.jetCollision();
+	 		
+			// BONUS TOGGLE TRUE
+			if(bonusToggle) {
+				bonusStrike();
+				bonusPoints.moveBonusPoints();
+				bonusPoints.drawBonusPoints();
+			}
+	 		
+			enemy.drawEnemy();
+			enemy.moveEnemy();
+			jet.drawJet();
+
+			rocket.moveRocket();
+			rocket.drawRocket();
+			checkKeys();
 		}
- 		
-		enemy.drawEnemy();
-		enemy.moveEnemy();
-		jet.drawJet();
-
-		rocket.moveRocket();
-		rocket.drawRocket();
-		checkKeys();
-
-	
-	points.drawScore();
-	life.drawLife();
-	level.drawLevel();
-
+		
+	 	points.drawScore();
+		life.drawLife();
 	}
-
- 
-	
 	// VARIABLE REQUIRED FOR PAUSE
-	loopGame = setTimeout(gameLoop, 1000 / 30); //30 FPS
-
+	loopGame = requestAnimateFrame(gameLoop)
 }
+
+//-------------------------------------------------------------------------------------------//
+// REQUEST ANIMATION WITH FALLBACK ----------------------------------------------------------//
+//-------------------------------------------------------------------------------------------//
+
+function requestAnimateFrame(a) {
+	return requestAnimationFrame(a) ||
+ 			webkitRequestAnimationFrame(a) ||
+			   mozRequestAnimationFrame(a) ||
+			   function(callback) {
+ 					setTimeout(a, 1000 / 60);
+			   }
+}
+
 
 //-------------------------------------------------------------------------------------------//
 // RENDER -----------------------------------------------------------------------------------//
